@@ -40,6 +40,8 @@ export default function App() {
   const [refreshing, setRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
+  const [removeConfirmVisible, setRemoveConfirmVisible] = useState(false);
+  const [removingCoinId, setRemovingCoinId] = useState(null);
   const [newCoin, setNewCoin] = useState({ symbol: '', amount: '', buyPrice: '' });
   const [editingCoin, setEditingCoin] = useState(null);
   const [portfolioPrices, setPortfolioPrices] = useState({});
@@ -105,17 +107,29 @@ export default function App() {
     setEditingCoin(null);
   }
 
-  async function removeCoin(id) {
-    Alert.alert('Remove coin', 'Remove this from your portfolio?', [
-      { text: 'Cancel' },
-      { text: 'Remove', style: 'destructive', onPress: async () => {
-        try {
-          const { error } = await supabase.from('portfolio').delete().eq('id', id);
-          if (error) throw error;
-          loadPortfolio();
-        } catch (e) { Alert.alert('Error', String(e)); }
-      }}
-    ]);
+  function getCoinToRemove() {
+    return portfolio.find(c => c.id === removingCoinId);
+  }
+
+  function removeCoin(id) {
+    setRemovingCoinId(id);
+    setRemoveConfirmVisible(true);
+  }
+
+  async function confirmRemove() {
+    if (!removingCoinId) return;
+    try {
+      const { error } = await supabase.from('portfolio').delete().eq('id', removingCoinId);
+      if (error) throw error;
+      setRemoveConfirmVisible(false);
+      setRemovingCoinId(null);
+      loadPortfolio();
+    } catch (e) { Alert.alert('Error', 'Failed to remove coin: ' + String(e)); }
+  }
+
+  function cancelRemove() {
+    setRemoveConfirmVisible(false);
+    setRemovingCoinId(null);
   }
 
   async function fetchPortfolioPrices(coins) {
@@ -393,6 +407,23 @@ export default function App() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      <Modal visible={removeConfirmVisible} transparent animationType="fade">
+        <View style={styles.confirmOverlay}>
+          <View style={styles.confirmCard}>
+            <Text style={styles.confirmTitle}>Remove {getCoinToRemove()?.symbol}?</Text>
+            <Text style={styles.confirmText}>This will remove this coin from your portfolio. This action cannot be undone.</Text>
+            <View style={styles.confirmActions}>
+              <TouchableOpacity style={styles.confirmCancelBtn} onPress={cancelRemove}>
+                <Text style={styles.confirmCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.confirmDeleteBtn} onPress={confirmRemove}>
+                <Text style={styles.confirmDeleteText}>Remove</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -450,4 +481,13 @@ const styles = StyleSheet.create({
   cancelBtn: { padding: 14, alignItems: 'center' },
   cancelBtnText: { color: COLORS.muted, fontSize: 14 },
   staticText: { backgroundColor: COLORS.bg, borderWidth: 0.5, borderColor: COLORS.border, borderRadius: 8, padding: 12, fontSize: 15, color: COLORS.text, marginBottom: 10 },
+  confirmOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 },
+  confirmCard: { backgroundColor: COLORS.card, borderRadius: 16, padding: 20, borderWidth: 0.5, borderColor: COLORS.border },
+  confirmTitle: { fontSize: 18, fontWeight: '600', color: COLORS.text, marginBottom: 12 },
+  confirmText: { fontSize: 14, color: COLORS.muted, marginBottom: 20, lineHeight: 20 },
+  confirmActions: { flexDirection: 'row', gap: 12, justifyContent: 'flex-end' },
+  confirmCancelBtn: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, borderWidth: 0.5, borderColor: COLORS.border },
+  confirmCancelText: { fontSize: 14, fontWeight: '500', color: COLORS.text },
+  confirmDeleteBtn: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, backgroundColor: COLORS.red },
+  confirmDeleteText: { fontSize: 14, fontWeight: '600', color: '#fff' },
 });
