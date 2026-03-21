@@ -41,6 +41,7 @@ export default function App() {
   const [lastUpdated, setLastUpdated] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
   const [newCoin, setNewCoin] = useState({ symbol: '', amount: '', buyPrice: '' });
+  const [editingCoin, setEditingCoin] = useState(null);
   const [portfolioPrices, setPortfolioPrices] = useState({});
 
   useEffect(() => { loadPortfolio(); }, []);
@@ -75,6 +76,33 @@ export default function App() {
       setNewCoin({ symbol: '', amount: '', buyPrice: '' });
       loadPortfolio();
     } catch (e) { Alert.alert('Error', String(e)); }
+  }
+
+  async function updateCoin() {
+    if (!editingCoin.symbol || !editingCoin.amount || !editingCoin.buyPrice) {
+      Alert.alert('Missing info', 'Please fill in all fields.');
+      return;
+    }
+    try {
+      const { error } = await supabase.from('portfolio')
+        .update({ symbol: editingCoin.symbol.toUpperCase().trim(), amount: parseFloat(editingCoin.amount), buy_price: parseFloat(editingCoin.buyPrice) })
+        .eq('id', editingCoin.id);
+      if (error) throw error;
+      setModalVisible(false);
+      setEditingCoin(null);
+      loadPortfolio();
+    } catch (e) { Alert.alert('Error', String(e)); }
+  }
+
+  function openEditModal(coin) {
+    setEditingCoin({ ...coin });
+    setModalVisible(true);
+  }
+
+  function closeModal() {
+    setModalVisible(false);
+    setNewCoin({ symbol: '', amount: '', buyPrice: '' });
+    setEditingCoin(null);
   }
 
   async function removeCoin(id) {
@@ -272,9 +300,14 @@ export default function App() {
                     <Text style={styles.coinSymbol}>{coin.symbol}</Text>
                     <Text style={styles.coinSub}>{coin.amount} coins · bought @ ${coin.buyPrice}</Text>
                   </View>
-                  <TouchableOpacity onPress={() => removeCoin(coin.id)}>
-                    <Text style={styles.removeBtn}>✕</Text>
-                  </TouchableOpacity>
+                  <View style={styles.coinActions}>
+                    <TouchableOpacity onPress={() => openEditModal(coin)} style={styles.editBtnArea}>
+                      <Text style={styles.editBtn}>✎</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => removeCoin(coin.id)}>
+                      <Text style={styles.removeBtn}>✕</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
                 <View style={styles.coinStats}>
                   <View>
@@ -334,17 +367,27 @@ export default function App() {
       <Modal visible={modalVisible} transparent animationType="slide">
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalOverlay}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Add coin to portfolio</Text>
-            <Text style={styles.inputLabel}>Coin symbol (e.g. BTC, SOL)</Text>
-            <TextInput style={styles.input} placeholder="BTC" placeholderTextColor={COLORS.muted} value={newCoin.symbol} onChangeText={v => setNewCoin({ ...newCoin, symbol: v })} autoCapitalize="characters" />
+            <Text style={styles.modalTitle}>{editingCoin ? 'Edit coin' : 'Add coin to portfolio'}</Text>
+            {!editingCoin && (
+              <>
+                <Text style={styles.inputLabel}>Coin symbol (e.g. BTC, SOL)</Text>
+                <TextInput style={styles.input} placeholder="BTC" placeholderTextColor={COLORS.muted} value={newCoin.symbol} onChangeText={v => setNewCoin({ ...newCoin, symbol: v })} autoCapitalize="characters" />
+              </>
+            )}
+            {editingCoin && (
+              <>
+                <Text style={styles.inputLabel}>Coin symbol</Text>
+                <Text style={styles.staticText}>{editingCoin.symbol}</Text>
+              </>
+            )}
             <Text style={styles.inputLabel}>Amount you hold</Text>
-            <TextInput style={styles.input} placeholder="0.5" placeholderTextColor={COLORS.muted} value={newCoin.amount} onChangeText={v => setNewCoin({ ...newCoin, amount: v })} keyboardType="decimal-pad" />
+            <TextInput style={styles.input} placeholder="0.5" placeholderTextColor={COLORS.muted} value={editingCoin ? editingCoin.amount.toString() : newCoin.amount} onChangeText={v => editingCoin ? setEditingCoin({ ...editingCoin, amount: parseFloat(v) || 0 }) : setNewCoin({ ...newCoin, amount: v })} keyboardType="decimal-pad" />
             <Text style={styles.inputLabel}>Your buy price (USD)</Text>
-            <TextInput style={styles.input} placeholder="45000" placeholderTextColor={COLORS.muted} value={newCoin.buyPrice} onChangeText={v => setNewCoin({ ...newCoin, buyPrice: v })} keyboardType="decimal-pad" />
-            <TouchableOpacity style={styles.confirmBtn} onPress={addCoin}>
-              <Text style={styles.confirmBtnText}>Add to portfolio</Text>
+            <TextInput style={styles.input} placeholder="45000" placeholderTextColor={COLORS.muted} value={editingCoin ? editingCoin.buyPrice.toString() : newCoin.buyPrice} onChangeText={v => editingCoin ? setEditingCoin({ ...editingCoin, buyPrice: parseFloat(v) || 0 }) : setNewCoin({ ...newCoin, buyPrice: v })} keyboardType="decimal-pad" />
+            <TouchableOpacity style={styles.confirmBtn} onPress={editingCoin ? updateCoin : addCoin}>
+              <Text style={styles.confirmBtnText}>{editingCoin ? 'Update coin' : 'Add to portfolio'}</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.cancelBtn} onPress={() => setModalVisible(false)}>
+            <TouchableOpacity style={styles.cancelBtn} onPress={closeModal}>
               <Text style={styles.cancelBtnText}>Cancel</Text>
             </TouchableOpacity>
           </View>
@@ -385,7 +428,10 @@ const styles = StyleSheet.create({
   coinHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 },
   coinSymbol: { fontSize: 15, fontWeight: '600', color: COLORS.text },
   coinSub: { fontSize: 12, color: COLORS.muted, marginTop: 2 },
-  removeBtn: { fontSize: 14, color: COLORS.muted, padding: 4 },
+  coinActions: { flexDirection: 'row', gap: 8 },
+  editBtnArea: { padding: 4 },
+  editBtn: { fontSize: 14, color: COLORS.blue, fontWeight: '500' },
+  removeBtn: { fontSize: 14, color: COLORS.red, padding: 4 },
   coinStats: { flexDirection: 'row', justifyContent: 'space-between' },
   statLabel: { fontSize: 11, color: COLORS.muted, marginBottom: 2 },
   statVal: { fontSize: 14, fontWeight: '500', color: COLORS.text },
@@ -403,4 +449,5 @@ const styles = StyleSheet.create({
   confirmBtnText: { color: '#fff', fontWeight: '600', fontSize: 15 },
   cancelBtn: { padding: 14, alignItems: 'center' },
   cancelBtnText: { color: COLORS.muted, fontSize: 14 },
+  staticText: { backgroundColor: COLORS.bg, borderWidth: 0.5, borderColor: COLORS.border, borderRadius: 8, padding: 12, fontSize: 15, color: COLORS.text, marginBottom: 10 },
 });
