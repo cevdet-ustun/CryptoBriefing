@@ -6,7 +6,7 @@ import {
 } from 'react-native';
 import { createClient } from '@supabase/supabase-js';
 
-const ANTHROPIC_API_KEY = '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';
+const ANTHROPIC_API_KEY = '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';
 const SUPABASE_URL = 'https://togyusfrvapccoqcqtor.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_LtgN8mg8cBM8ByqD92sk8w_V9Ah1Pxk';
 const USER_ID = 'cevdet';
