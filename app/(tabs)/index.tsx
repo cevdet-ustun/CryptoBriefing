@@ -1,13 +1,18 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet, Text, View, ScrollView, TouchableOpacity,
   TextInput, Alert, ActivityIndicator, SafeAreaView,
   StatusBar, RefreshControl, Modal, KeyboardAvoidingView, Platform
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { createClient } from '@supabase/supabase-js';
 
-const ANTHROPIC_API_KEY = 'YOUR_ANTHROPIC_API_KEY_HERE';
+const ANTHROPIC_API_KEY = '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';
+const SUPABASE_URL = 'https://togyusfrvapccoqcqtor.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_LtgN8mg8cBM8ByqD92sk8w_V9Ah1Pxk';
+const USER_ID = 'cevdet';
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
 const COLORS = {
   bg: '#0F1117', card: '#1A1D27', border: '#2A2D3A',
   text: '#FFFFFF', muted: '#8B8FA8', green: '#22C55E',
@@ -34,14 +39,12 @@ export default function App() {
 
   async function loadPortfolio() {
     try {
-      const saved = await AsyncStorage.getItem('portfolio');
-      if (saved) setPortfolio(JSON.parse(saved));
+      const { data, error } = await supabase.from('portfolio').select('*').eq('user_id', USER_ID);
+      if (error) throw error;
+      const coins = data.map(r => ({ id: r.id, symbol: r.symbol, amount: r.amount, buyPrice: r.buy_price }));
+      setPortfolio(coins);
+      fetchPortfolioPrices(coins);
     } catch (e) {}
-  }
-
-  async function savePortfolio(updated) {
-    setPortfolio(updated);
-    await AsyncStorage.setItem('portfolio', JSON.stringify(updated));
   }
 
   async function addCoin() {
@@ -49,24 +52,31 @@ export default function App() {
       Alert.alert('Missing info', 'Please fill in all fields.');
       return;
     }
-    const updated = [...portfolio, {
+    const coin = {
       id: Date.now().toString(),
+      user_id: USER_ID,
       symbol: newCoin.symbol.toUpperCase().trim(),
       amount: parseFloat(newCoin.amount),
-      buyPrice: parseFloat(newCoin.buyPrice),
-    }];
-    await savePortfolio(updated);
-    setNewCoin({ symbol: '', amount: '', buyPrice: '' });
-    setModalVisible(false);
-    fetchPortfolioPrices(updated);
+      buy_price: parseFloat(newCoin.buyPrice),
+    };
+    try {
+      const { error } = await supabase.from('portfolio').insert(coin);
+      if (error) throw error;
+      setModalVisible(false);
+      setNewCoin({ symbol: '', amount: '', buyPrice: '' });
+      loadPortfolio();
+    } catch (e) { Alert.alert('Error', String(e)); }
   }
 
   async function removeCoin(id) {
     Alert.alert('Remove coin', 'Remove this from your portfolio?', [
       { text: 'Cancel' },
       { text: 'Remove', style: 'destructive', onPress: async () => {
-        const updated = portfolio.filter(c => c.id !== id);
-        await savePortfolio(updated);
+        try {
+          const { error } = await supabase.from('portfolio').delete().eq('id', id);
+          if (error) throw error;
+          loadPortfolio();
+        } catch (e) { Alert.alert('Error', String(e)); }
       }}
     ]);
   }
@@ -92,14 +102,15 @@ export default function App() {
   }
 
   async function callClaude(prompt) {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const isWeb = typeof document !== 'undefined';
+    const url = isWeb ? '/api/claude' : 'https://api.anthropic.com/v1/messages';
+    const headers = isWeb
+      ? { 'Content-Type': 'application/json' }
+      : { 'Content-Type': 'application/json', 'x-api-key': ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' };
+    const res = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        messages: [{ role: 'user', content: prompt }]
-      })
+      headers,
+      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1000, messages: [{ role: 'user', content: prompt }] })
     });
     const data = await res.json();
     return data.content?.map(b => b.text || '').join('') || '';
@@ -129,9 +140,7 @@ export default function App() {
         .filter(l => l.length > 0).slice(0, 4);
       setActions(lines);
       setLastUpdated(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-    } catch (e) {
-      Alert.alert('Error', 'Could not load data. Check your connection.');
-    }
+    } catch (e) { Alert.alert('Error', String(e)); }
     setLoading(false);
   }
 
