@@ -1,12 +1,21 @@
-import { useState, useEffect, useCallback } from 'react';
-import {
-  StyleSheet, Text, View, ScrollView, TouchableOpacity,
-  TextInput, Alert, ActivityIndicator, SafeAreaView,
-  StatusBar, RefreshControl, Modal, KeyboardAvoidingView, Platform
-} from 'react-native';
 import { createClient } from '@supabase/supabase-js';
+import { useCallback, useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  RefreshControl,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  StyleSheet, Text,
+  TextInput,
+  TouchableOpacity,
+  View
+} from 'react-native';
 
-const ANTHROPIC_API_KEY = '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';
 const SUPABASE_URL = 'https://togyusfrvapccoqcqtor.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_LtgN8mg8cBM8ByqD92sk8w_V9Ah1Pxk';
 const USER_ID = 'cevdet';
@@ -102,11 +111,9 @@ export default function App() {
   }
 
   async function callClaude(prompt) {
-    const isWeb = typeof document !== 'undefined';
-    const url = isWeb ? '/api/claude' : 'https://api.anthropic.com/v1/messages';
-    const headers = isWeb
-      ? { 'Content-Type': 'application/json' }
-      : { 'Content-Type': 'application/json', 'x-api-key': ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' };
+    // Always use Netlify function for secure API access
+    const url = '/api/claude';
+    const headers = { 'Content-Type': 'application/json' };
     const res = await fetch(url, {
       method: 'POST',
       headers,
