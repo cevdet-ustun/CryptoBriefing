@@ -395,9 +395,9 @@ export default function App() {
               </>
             )}
             <Text style={styles.inputLabel}>Amount you hold</Text>
-            <TextInput style={styles.input} placeholder="0.5" placeholderTextColor={COLORS.muted} value={editingCoin ? editingCoin.amount.toString() : newCoin.amount} onChangeText={v => editingCoin ? setEditingCoin({ ...editingCoin, amount: parseFloat(v) || 0 }) : setNewCoin({ ...newCoin, amount: v })} keyboardType="decimal-pad" />
+            <TextInput style={styles.input} placeholder="0.5" placeholderTextColor={COLORS.muted} value={editingCoin ? editingCoin.amount.toString() : newCoin.amount} onChangeText={v => editingCoin ? setEditingCoin({ ...editingCoin, amount: v }) : setNewCoin({ ...newCoin, amount: v })} keyboardType="decimal-pad" />
             <Text style={styles.inputLabel}>Your buy price (USD)</Text>
-            <TextInput style={styles.input} placeholder="45000" placeholderTextColor={COLORS.muted} value={editingCoin ? editingCoin.buyPrice.toString() : newCoin.buyPrice} onChangeText={v => editingCoin ? setEditingCoin({ ...editingCoin, buyPrice: parseFloat(v) || 0 }) : setNewCoin({ ...newCoin, buyPrice: v })} keyboardType="decimal-pad" />
+            <TextInput style={styles.input} placeholder="0.0000005" placeholderTextColor={COLORS.muted} value={editingCoin ? editingCoin.buyPrice.toString() : newCoin.buyPrice} onChangeText={v => editingCoin ? setEditingCoin({ ...editingCoin, buyPrice: v }) : setNewCoin({ ...newCoin, buyPrice: v })} keyboardType="decimal-pad" />
             <TouchableOpacity style={styles.confirmBtn} onPress={editingCoin ? updateCoin : addCoin}>
               <Text style={styles.confirmBtnText}>{editingCoin ? 'Update coin' : 'Add to portfolio'}</Text>
             </TouchableOpacity>
