@@ -1,20 +1,21 @@
 import { createClient } from '@supabase/supabase-js';
 import { useCallback, useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  RefreshControl,
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  StyleSheet, Text,
-  TextInput,
-  TouchableOpacity,
-  View
+    ActivityIndicator,
+    Alert,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    RefreshControl,
+    SafeAreaView,
+    ScrollView,
+    StatusBar,
+    StyleSheet, Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
+import { calculatePortfolioPerformance } from '../../utils/portfolioPerformance';
 
 const SUPABASE_URL = 'https://togyusfrvapccoqcqtor.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_LtgN8mg8cBM8ByqD92sk8w_V9Ah1Pxk';
@@ -195,17 +196,11 @@ export default function App() {
 
   const onRefresh = useCallback(async () => { setRefreshing(true); await loadAll(); setRefreshing(false); }, [portfolio]);
 
-  function getPortfolioValue() {
-    return portfolio.reduce((sum, coin) => {
-      const price = portfolioPrices[coin.symbol.toLowerCase()]?.usd || coin.buyPrice;
-      return sum + price * coin.amount;
-    }, 0);
-  }
-
-  const totalValue = getPortfolioValue();
-  const totalCost = portfolio.reduce((sum, c) => sum + c.buyPrice * c.amount, 0);
-  const totalPnl = totalValue - totalCost;
-  const totalPnlPct = totalCost > 0 ? (totalPnl / totalCost) * 100 : 0;
+  const performance = calculatePortfolioPerformance(portfolio, portfolioPrices);
+  const totalValue = performance.totalCurrentValue;
+  const totalCost = performance.totalCostBasis;
+  const totalPnl = performance.totalGainLoss;
+  const totalPnlPct = performance.totalReturnPercentage;
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -290,9 +285,35 @@ export default function App() {
               <View style={styles.metric}>
                 <Text style={styles.metricLabel}>Total P&L</Text>
                 <Text style={[styles.metricVal, { color: totalPnl >= 0 ? COLORS.green : COLORS.red }]}>
-                  {totalPnl >= 0 ? '+' : ''}{totalPnlPct.toFixed(1)}%
+                  {totalPnlPct >= 0 ? '+' : ''}{totalPnlPct.toFixed(1)}%
                 </Text>
               </View>
+            </View>
+          )}
+          {portfolio.length > 0 && (
+            <View style={styles.metricsRow}>
+              <View style={styles.metric}>
+                <Text style={styles.metricLabel}>Avg return</Text>
+                <Text style={[styles.metricVal, { color: performance.averageReturn >= 0 ? COLORS.green : COLORS.red }]}>
+                  {performance.averageReturn >= 0 ? '+' : ''}{performance.averageReturn.toFixed(1)}%
+                </Text>
+              </View>
+              {performance.bestPerformer && (
+                <View style={styles.metric}>
+                  <Text style={styles.metricLabel}>Best</Text>
+                  <Text style={[styles.metricVal, { color: COLORS.green, fontSize: 14 }]}>
+                    {performance.bestPerformer.symbol}
+                  </Text>
+                </View>
+              )}
+              {performance.worstPerformer && (
+                <View style={styles.metric}>
+                  <Text style={styles.metricLabel}>Worst</Text>
+                  <Text style={[styles.metricVal, { color: COLORS.red, fontSize: 14 }]}>
+                    {performance.worstPerformer.symbol}
+                  </Text>
+                </View>
+              )}
             </View>
           )}
           {portfolio.length === 0 ? (
