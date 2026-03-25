@@ -76,7 +76,10 @@ export default function App() {
   async function loadPortfolio() {
     try {
       const response = await fetch('/api/binance-portfolio');
-      if (!response.ok) throw new Error('Failed to fetch portfolio');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`HTTP ${response.status}: ${JSON.stringify(errorData)}`);
+      }
       const coins = await response.json();
       setPortfolio(coins);
       fetchPortfolioPrices(coins);

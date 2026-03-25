@@ -13,7 +13,7 @@ exports.handler = async function(event) {
   const apiSecret = process.env.BINANCE_API_SECRET;
 
   if (!apiKey || !apiSecret) {
-    return { statusCode: 500, body: JSON.stringify({ error: 'API keys not configured' }) };
+    return { statusCode: 500, body: JSON.stringify({ error: 'API keys not configured', hasApiKey: !!apiKey, hasApiSecret: !!apiSecret }) };
   }
 
   try {
@@ -30,7 +30,8 @@ exports.handler = async function(event) {
     });
 
     if (!accountResponse.ok) {
-      throw new Error(`Binance API error: ${accountResponse.status}`);
+      const errorText = await accountResponse.text();
+      return { statusCode: 500, body: JSON.stringify({ error: `Binance API error: ${accountResponse.status}`, details: errorText }) };
     }
 
     const accountData = await accountResponse.json();
