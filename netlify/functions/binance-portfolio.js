@@ -17,7 +17,17 @@ exports.handler = async function(event) {
   }
 
   try {
-    const timestamp = Date.now();
+    // First, get server time to sync timestamp
+    const timeResponse = await fetch('https://api.binance.com/api/v3/time');
+    if (!timeResponse.ok) {
+      throw new Error('Failed to get Binance server time');
+    }
+    const timeData = await timeResponse.json();
+    const serverTime = timeData.serverTime;
+    const timestamp = serverTime;
+
+    console.log(`Server time: ${serverTime}, using timestamp: ${timestamp}`);
+
     const query = `timestamp=${timestamp}`;
     const signature = createSignature(query, apiSecret);
 
@@ -36,12 +46,17 @@ exports.handler = async function(event) {
 
     const accountData = await accountResponse.json();
 
+    // Debug: log number of balances
+    console.log(`Found ${accountData.balances.length} balance entries`);
+
     const portfolio = [];
 
     for (const balance of accountData.balances) {
       const free = parseFloat(balance.free);
       const locked = parseFloat(balance.locked);
       const total = free + locked;
+
+      console.log(`${balance.asset}: free=${balance.free}, locked=${balance.locked}, total=${total}`);
 
       if (total > 0) {
         const symbol = balance.asset;
