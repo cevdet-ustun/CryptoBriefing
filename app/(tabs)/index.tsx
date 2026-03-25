@@ -77,7 +77,7 @@ export default function App() {
     try {
       // Call the proxy server (deployed on Vercel in US region)
       // TODO: Replace with your actual Vercel deployment URL
-      const proxyUrl = 'https://crypto-briefing-proxy.vercel.app/api/binance-portfolio';
+      const proxyUrl = 'https://cryptobriefingjeff.vercel.app/api/binance-portfolio';
       const response = await fetch(proxyUrl);
       if (!response.ok) {
         const errorData = await response.json();
