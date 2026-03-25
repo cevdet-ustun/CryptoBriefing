@@ -17,16 +17,21 @@ exports.handler = async function(event) {
   }
 
   try {
-    // First, get server time to sync timestamp
-    const timeResponse = await fetch('https://api.binance.com/api/v3/time');
-    if (!timeResponse.ok) {
-      throw new Error('Failed to get Binance server time');
+    // First, get server time to sync timestamp (optional)
+    let timestamp;
+    try {
+      const timeResponse = await fetch('https://api.binance.com/api/v3/time');
+      if (timeResponse.ok) {
+        const timeData = await timeResponse.json();
+        timestamp = timeData.serverTime;
+        console.log(`Using server time: ${timestamp}`);
+      } else {
+        throw new Error('Server time fetch failed');
+      }
+    } catch (e) {
+      console.log('Falling back to local time');
+      timestamp = Date.now();
     }
-    const timeData = await timeResponse.json();
-    const serverTime = timeData.serverTime;
-    const timestamp = serverTime;
-
-    console.log(`Server time: ${serverTime}, using timestamp: ${timestamp}`);
 
     const query = `timestamp=${timestamp}`;
     const signature = createSignature(query, apiSecret);
@@ -117,7 +122,6 @@ exports.handler = async function(event) {
         debug: {
           totalBalances: accountData.balances.length,
           nonZeroBalances: totalBalances,
-          serverTime: serverTime,
           timestampUsed: timestamp
         }
       })
