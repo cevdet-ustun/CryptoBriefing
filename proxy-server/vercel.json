@@ -3,14 +3,21 @@
   "builds": [
     {
       "src": "api/**/*.js",
-      "use": "@vercel/node"
+      "use": "@vercel/node",
+      "config": {
+        "zeroConfig": true
+      }
     }
   ],
   "routes": [
     {
+      "src": "/api/binance-portfolio",
+      "dest": "/api/binance-portfolio.js"
+    },
+    {
       "src": "/api/(.*)",
-      "dest": "/api/$1"
+      "dest": "/api/$1.js"
     }
   ],
-  "regions": ["iad1"] 
+  "regions": ["iad1"]
 }
