@@ -83,6 +83,9 @@ export default function App() {
       const data = await response.json();
       const coins = data.portfolio || [];
       console.log('Portfolio data:', data);
+      if (data.debug) {
+        Alert.alert('Debug Info', `Total balances: ${data.debug.totalBalances}, Non-zero: ${data.debug.nonZeroBalances}`);
+      }
       setPortfolio(coins);
       fetchPortfolioPrices(coins);
     } catch (e) {
