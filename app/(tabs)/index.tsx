@@ -314,9 +314,35 @@ export default function App() {
               <View style={styles.metric}>
                 <Text style={styles.metricLabel}>Total P&L</Text>
                 <Text style={[styles.metricVal, { color: totalPnl >= 0 ? COLORS.green : COLORS.red }]}>
-                  {totalPnl >= 0 ? '+' : ''}{totalPnlPct.toFixed(1)}%
+                  {totalPnlPct >= 0 ? '+' : ''}{totalPnlPct.toFixed(1)}%
                 </Text>
               </View>
+            </View>
+          )}
+          {portfolio.length > 0 && (
+            <View style={styles.metricsRow}>
+              <View style={styles.metric}>
+                <Text style={styles.metricLabel}>Avg return</Text>
+                <Text style={[styles.metricVal, { color: performance.averageReturn >= 0 ? COLORS.green : COLORS.red }]}>
+                  {performance.averageReturn >= 0 ? '+' : ''}{performance.averageReturn.toFixed(1)}%
+                </Text>
+              </View>
+              {performance.bestPerformer && (
+                <View style={styles.metric}>
+                  <Text style={styles.metricLabel}>Best</Text>
+                  <Text style={[styles.metricVal, { color: COLORS.green, fontSize: 14 }]}>
+                    {performance.bestPerformer.symbol}
+                  </Text>
+                </View>
+              )}
+              {performance.worstPerformer && (
+                <View style={styles.metric}>
+                  <Text style={styles.metricLabel}>Worst</Text>
+                  <Text style={[styles.metricVal, { color: COLORS.red, fontSize: 14 }]}>
+                    {performance.worstPerformer.symbol}
+                  </Text>
+                </View>
+              )}
             </View>
           )}
           {portfolio.length === 0 ? (
