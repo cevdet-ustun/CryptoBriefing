@@ -75,10 +75,8 @@ export default function App() {
 
   async function loadPortfolio() {
     try {
-      // Call the proxy server (deployed on Vercel in US region)
-      // TODO: Replace with your actual Vercel deployment URL
-      const proxyUrl = 'https://cryptobriefingjeff.vercel.app/api/binance-portfolio';
-      const response = await fetch(proxyUrl);
+      // Call the Netlify function (same deployment as main app)
+      const response = await fetch('/.netlify/functions/binance-portfolio');
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(`HTTP ${response.status}: ${JSON.stringify(errorData)}`);
