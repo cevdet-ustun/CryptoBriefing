@@ -50,6 +50,7 @@ exports.handler = async function(event) {
     console.log(`Found ${accountData.balances.length} balance entries`);
 
     const portfolio = [];
+    let totalBalances = 0;
 
     for (const balance of accountData.balances) {
       const free = parseFloat(balance.free);
@@ -59,6 +60,8 @@ exports.handler = async function(event) {
       console.log(`${balance.asset}: free=${balance.free}, locked=${balance.locked}, total=${total}`);
 
       if (total > 0) {
+        totalBalances++;
+        const symbol = balance.asset;
         const symbol = balance.asset;
 
         let buyPrice = 0;
@@ -105,10 +108,20 @@ exports.handler = async function(event) {
       }
     }
 
+    console.log(`Portfolio built with ${portfolio.length} coins, total balances processed: ${totalBalances}`);
+
     return {
       statusCode: 200,
       headers: { 'Access-Control-Allow-Origin': '*' },
-      body: JSON.stringify(portfolio)
+      body: JSON.stringify({
+        portfolio,
+        debug: {
+          totalBalances: accountData.balances.length,
+          nonZeroBalances: totalBalances,
+          serverTime: serverTime,
+          timestampUsed: timestamp
+        }
+      })
     };
   } catch (e) {
     return { statusCode: 500, body: JSON.stringify({ error: String(e) }) };

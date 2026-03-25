@@ -80,7 +80,9 @@ export default function App() {
         const errorData = await response.json();
         throw new Error(`HTTP ${response.status}: ${JSON.stringify(errorData)}`);
       }
-      const coins = await response.json();
+      const data = await response.json();
+      const coins = data.portfolio || [];
+      console.log('Portfolio data:', data);
       setPortfolio(coins);
       fetchPortfolioPrices(coins);
     } catch (e) {
@@ -351,7 +353,7 @@ export default function App() {
           {portfolio.length === 0 ? (
             <View style={styles.emptyState}>
               <Text style={styles.emptyTitle}>No coins in your Binance account</Text>
-              <Text style={styles.emptyText}>Your portfolio will load automatically from Binance.</Text>
+              <Text style={styles.emptyText}>Your portfolio will load automatically from Binance. Make sure you have crypto balances in your account.</Text>
             </View>
           ) : portfolio.map(coin => {
             const livePrice = portfolioPrices[coin.symbol.toLowerCase()]?.usd;
