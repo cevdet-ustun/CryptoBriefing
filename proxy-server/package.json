@@ -1,0 +1,14 @@
+{
+  "name": "crypto-briefing-proxy",
+  "version": "1.0.0",
+  "description": "Proxy server for Binance API to bypass location restrictions",
+  "main": "api/binance-portfolio.js",
+  "scripts": {
+    "dev": "vercel dev",
+    "build": "echo 'No build step required'",
+    "start": "vercel dev"
+  },
+  "keywords": ["binance", "api", "proxy", "crypto"],
+  "author": "Cevdet Ustun",
+  "license": "MIT"
+}

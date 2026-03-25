@@ -75,16 +75,22 @@ export default function App() {
 
   async function loadPortfolio() {
     try {
-      // For now, let's create a simple portfolio with your known coins
-      // You can replace this with actual API calls once location issues are resolved
-      const mockPortfolio = [
-        { symbol: 'PEPE', amount: 8764284.67, buyPrice: 0.00000582 },
-        { symbol: 'DOGE', amount: 1000, buyPrice: 0.08 },
-        // Add more coins as needed
-      ];
-
-      setPortfolio(mockPortfolio);
-      fetchPortfolioPrices(mockPortfolio);
+      // Call the proxy server (deployed on Vercel in US region)
+      // TODO: Replace with your actual Vercel deployment URL
+      const proxyUrl = 'https://crypto-briefing-proxy.vercel.app/api/binance-portfolio';
+      const response = await fetch(proxyUrl);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`HTTP ${response.status}: ${JSON.stringify(errorData)}`);
+      }
+      const data = await response.json();
+      const coins = data.portfolio || [];
+      console.log('Portfolio data:', data);
+      if (data.debug) {
+        Alert.alert('Debug Info', `Total balances: ${data.debug.totalBalances}, Non-zero: ${data.debug.nonZeroBalances}`);
+      }
+      setPortfolio(coins);
+      fetchPortfolioPrices(coins);
     } catch (e) {
       Alert.alert('Error', 'Failed to load portfolio: ' + String(e));
     }
