@@ -1,0 +1,100 @@
+const crypto = require('crypto');
+
+function createSignature(queryString, secret) {
+  return crypto.createHmac('sha256', secret).update(queryString).digest('hex');
+}
+
+exports.handler = async function(event) {
+  if (event.httpMethod !== 'GET') {
+    return { statusCode: 405, body: 'Method Not Allowed' };
+  }
+
+  const apiKey = process.env.BINANCE_API_KEY;
+  const apiSecret = process.env.BINANCE_API_SECRET;
+
+  if (!apiKey || !apiSecret) {
+    return { statusCode: 500, body: JSON.stringify({ error: 'API keys not configured' }) };
+  }
+
+  try {
+    const timestamp = Date.now();
+    const query = `timestamp=${timestamp}`;
+    const signature = createSignature(query, apiSecret);
+
+    const accountUrl = `https://api.binance.com/api/v3/account?${query}&signature=${signature}`;
+
+    const accountResponse = await fetch(accountUrl, {
+      headers: {
+        'X-MBX-APIKEY': apiKey
+      }
+    });
+
+    if (!accountResponse.ok) {
+      throw new Error(`Binance API error: ${accountResponse.status}`);
+    }
+
+    const accountData = await accountResponse.json();
+
+    const portfolio = [];
+
+    for (const balance of accountData.balances) {
+      const free = parseFloat(balance.free);
+      const locked = parseFloat(balance.locked);
+      const total = free + locked;
+
+      if (total > 0) {
+        const symbol = balance.asset;
+
+        let buyPrice = 0;
+        if (symbol !== 'USDT') {
+          try {
+            const tradesQuery = `symbol=${symbol}USDT&timestamp=${timestamp}`;
+            const tradesSignature = createSignature(tradesQuery, apiSecret);
+            const tradesUrl = `https://api.binance.com/api/v3/myTrades?${tradesQuery}&signature=${tradesSignature}`;
+
+            const tradesResponse = await fetch(tradesUrl, {
+              headers: { 'X-MBX-APIKEY': apiKey }
+            });
+
+            if (tradesResponse.ok) {
+              const trades = await tradesResponse.json();
+              const buyTrades = trades.filter(t => t.isBuyer);
+              if (buyTrades.length > 0) {
+                const totalCost = buyTrades.reduce((sum, t) => sum + parseFloat(t.price) * parseFloat(t.qty), 0);
+                const totalQty = buyTrades.reduce((sum, t) => sum + parseFloat(t.qty), 0);
+                buyPrice = totalCost / totalQty;
+              }
+            }
+          } catch (e) {
+            // If trades fail, set to current price
+          }
+        }
+
+        if (buyPrice === 0) {
+          // Fallback to current price
+          try {
+            const priceResponse = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${symbol}USDT`);
+            if (priceResponse.ok) {
+              const priceData = await priceResponse.json();
+              buyPrice = parseFloat(priceData.price);
+            }
+          } catch (e) {}
+        }
+
+        portfolio.push({
+          symbol: symbol,
+          amount: total,
+          buyPrice: buyPrice
+        });
+      }
+    }
+
+    return {
+      statusCode: 200,
+      headers: { 'Access-Control-Allow-Origin': '*' },
+      body: JSON.stringify(portfolio)
+    };
+  } catch (e) {
+    return { statusCode: 500, body: JSON.stringify({ error: String(e) }) };
+  }
+};

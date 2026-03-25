@@ -3,15 +3,11 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
   RefreshControl,
   SafeAreaView,
   ScrollView,
   StatusBar,
   StyleSheet, Text,
-  TextInput,
   TouchableOpacity,
   View
 } from 'react-native';
@@ -21,6 +17,39 @@ const SUPABASE_KEY = 'sb_publishable_LtgN8mg8cBM8ByqD92sk8w_V9Ah1Pxk';
 const USER_ID = 'cevdet';
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const symbolToId = {
+  BTC: 'bitcoin',
+  ETH: 'ethereum',
+  USDT: 'tether',
+  BNB: 'binancecoin',
+  ADA: 'cardano',
+  SOL: 'solana',
+  DOT: 'polkadot',
+  DOGE: 'dogecoin',
+  AVAX: 'avalanche-2',
+  MATIC: 'matic-network',
+  LINK: 'chainlink',
+  UNI: 'uniswap',
+  ALGO: 'algorand',
+  VET: 'vechain',
+  ICP: 'internet-computer',
+  FIL: 'filecoin',
+  TRX: 'tron',
+  ETC: 'ethereum-classic',
+  XLM: 'stellar',
+  THETA: 'theta-token',
+  HBAR: 'hedera-hashgraph',
+  NEAR: 'near',
+  FLOW: 'flow',
+  MANA: 'decentraland',
+  SAND: 'the-sandbox',
+  AXS: 'axie-infinity',
+  CHZ: 'chiliz',
+  ENJ: 'enjincoin',
+  GALA: 'gala',
+  // Add more as needed
+};
 
 const COLORS = {
   bg: '#0F1117', card: '#1A1D27', border: '#2A2D3A',
@@ -39,11 +68,6 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState('');
-  const [modalVisible, setModalVisible] = useState(false);
-  const [removeConfirmVisible, setRemoveConfirmVisible] = useState(false);
-  const [removingCoinId, setRemovingCoinId] = useState(null);
-  const [newCoin, setNewCoin] = useState({ symbol: '', amount: '', buyPrice: '' });
-  const [editingCoin, setEditingCoin] = useState(null);
   const [portfolioPrices, setPortfolioPrices] = useState({});
 
   useEffect(() => { loadPortfolio(); }, []);
@@ -51,12 +75,14 @@ export default function App() {
 
   async function loadPortfolio() {
     try {
-      const { data, error } = await supabase.from('portfolio').select('*').eq('user_id', USER_ID);
-      if (error) throw error;
-      const coins = data.map(r => ({ id: r.id, symbol: r.symbol, amount: r.amount, buyPrice: r.buy_price }));
+      const response = await fetch('/api/binance-portfolio');
+      if (!response.ok) throw new Error('Failed to fetch portfolio');
+      const coins = await response.json();
       setPortfolio(coins);
       fetchPortfolioPrices(coins);
-    } catch (e) {}
+    } catch (e) {
+      Alert.alert('Error', 'Failed to load portfolio: ' + String(e));
+    }
   }
 
   async function addCoin() {
@@ -135,7 +161,7 @@ export default function App() {
   async function fetchPortfolioPrices(coins) {
     if (!coins.length) return;
     try {
-      const ids = coins.map(c => c.symbol.toLowerCase()).join(',');
+      const ids = coins.map(c => symbolToId[c.symbol] || c.symbol.toLowerCase()).join(',');
       const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=' + ids + '&vs_currencies=usd&include_24hr_change=true');
       const data = await res.json();
       setPortfolioPrices(data);
@@ -197,7 +223,8 @@ export default function App() {
 
   function getPortfolioValue() {
     return portfolio.reduce((sum, coin) => {
-      const price = portfolioPrices[coin.symbol.toLowerCase()]?.usd || coin.buyPrice;
+      const id = symbolToId[coin.symbol] || coin.symbol.toLowerCase();
+      const price = portfolioPrices[id]?.usd || coin.buyPrice;
       return sum + price * coin.amount;
     }, 0);
   }
@@ -273,9 +300,6 @@ export default function App() {
         <ScrollView style={styles.scroll}>
           <View style={styles.pageHeader}>
             <Text style={styles.pageTitle}>My portfolio</Text>
-            <TouchableOpacity style={styles.addBtn} onPress={() => setModalVisible(true)}>
-              <Text style={styles.addBtnText}>+ Add coin</Text>
-            </TouchableOpacity>
           </View>
           {portfolio.length > 0 && (
             <View style={styles.metricsRow}>
@@ -297,8 +321,8 @@ export default function App() {
           )}
           {portfolio.length === 0 ? (
             <View style={styles.emptyState}>
-              <Text style={styles.emptyTitle}>No coins yet</Text>
-              <Text style={styles.emptyText}>Tap "+ Add coin" to start tracking your portfolio.</Text>
+              <Text style={styles.emptyTitle}>No coins in your Binance account</Text>
+              <Text style={styles.emptyText}>Your portfolio will load automatically from Binance.</Text>
             </View>
           ) : portfolio.map(coin => {
             const livePrice = portfolioPrices[coin.symbol.toLowerCase()]?.usd;
@@ -308,19 +332,11 @@ export default function App() {
             const pnl = (currentPrice - coin.buyPrice) * coin.amount;
             const pnlPct = ((currentPrice - coin.buyPrice) / coin.buyPrice) * 100;
             return (
-              <View key={coin.id} style={styles.card}>
+              <View key={coin.symbol} style={styles.card}>
                 <View style={styles.coinHeader}>
                   <View>
                     <Text style={styles.coinSymbol}>{coin.symbol}</Text>
                     <Text style={styles.coinSub}>{coin.amount} coins · bought @ ${coin.buyPrice}</Text>
-                  </View>
-                  <View style={styles.coinActions}>
-                    <TouchableOpacity onPress={() => openEditModal(coin)} style={styles.editBtnArea}>
-                      <Text style={styles.editBtn}>✎</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => removeCoin(coin.id)}>
-                      <Text style={styles.removeBtn}>✕</Text>
-                    </TouchableOpacity>
                   </View>
                 </View>
                 <View style={styles.coinStats}>
@@ -378,52 +394,6 @@ export default function App() {
         </ScrollView>
       )}
 
-      <Modal visible={modalVisible} transparent animationType="slide">
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>{editingCoin ? 'Edit coin' : 'Add coin to portfolio'}</Text>
-            {!editingCoin && (
-              <>
-                <Text style={styles.inputLabel}>Coin symbol (e.g. BTC, SOL)</Text>
-                <TextInput style={styles.input} placeholder="BTC" placeholderTextColor={COLORS.muted} value={newCoin.symbol} onChangeText={v => setNewCoin({ ...newCoin, symbol: v })} autoCapitalize="characters" />
-              </>
-            )}
-            {editingCoin && (
-              <>
-                <Text style={styles.inputLabel}>Coin symbol</Text>
-                <Text style={styles.staticText}>{editingCoin.symbol}</Text>
-              </>
-            )}
-            <Text style={styles.inputLabel}>Amount you hold</Text>
-            <TextInput style={styles.input} placeholder="0.5" placeholderTextColor={COLORS.muted} value={editingCoin ? editingCoin.amount.toString() : newCoin.amount} onChangeText={v => editingCoin ? setEditingCoin({ ...editingCoin, amount: v }) : setNewCoin({ ...newCoin, amount: v })} keyboardType="decimal-pad" />
-            <Text style={styles.inputLabel}>Your buy price (USD)</Text>
-            <TextInput style={styles.input} placeholder="0.0000005" placeholderTextColor={COLORS.muted} value={editingCoin ? editingCoin.buyPrice.toString() : newCoin.buyPrice} onChangeText={v => editingCoin ? setEditingCoin({ ...editingCoin, buyPrice: v }) : setNewCoin({ ...newCoin, buyPrice: v })} keyboardType="decimal-pad" />
-            <TouchableOpacity style={styles.confirmBtn} onPress={editingCoin ? updateCoin : addCoin}>
-              <Text style={styles.confirmBtnText}>{editingCoin ? 'Update coin' : 'Add to portfolio'}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.cancelBtn} onPress={closeModal}>
-              <Text style={styles.cancelBtnText}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
-
-      <Modal visible={removeConfirmVisible} transparent animationType="fade">
-        <View style={styles.confirmOverlay}>
-          <View style={styles.confirmCard}>
-            <Text style={styles.confirmTitle}>Remove {getCoinToRemove()?.symbol}?</Text>
-            <Text style={styles.confirmText}>This will remove this coin from your portfolio. This action cannot be undone.</Text>
-            <View style={styles.confirmActions}>
-              <TouchableOpacity style={styles.confirmCancelBtn} onPress={cancelRemove}>
-                <Text style={styles.confirmCancelText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.confirmDeleteBtn} onPress={confirmRemove}>
-                <Text style={styles.confirmDeleteText}>Remove</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </SafeAreaView>
   );
 }

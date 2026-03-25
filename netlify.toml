@@ -6,3 +6,8 @@
   from = "/api/claude"
   to = "/.netlify/functions/claude"
   status = 200
+
+[[redirects]]
+  from = "/api/binance-portfolio"
+  to = "/.netlify/functions/binance-portfolio"
+  status = 200
