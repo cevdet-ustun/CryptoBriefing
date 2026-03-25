@@ -62,7 +62,6 @@ exports.handler = async function(event) {
       if (total > 0) {
         totalBalances++;
         const symbol = balance.asset;
-        const symbol = balance.asset;
 
         let buyPrice = 0;
         if (symbol !== 'USDT') {
